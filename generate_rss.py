@@ -2,40 +2,41 @@ import requests
 import xml.etree.ElementTree as ET
 from datetime import datetime
 
-station_id = "0913TH"
-api_url = f"https://environment.data.gov.uk/flood-monitoring/id/stations/{station_id}"
+API_URL = "https://environment.data.gov.uk/flood-monitoring/id/stations/0913TH"
 
-response = requests.get(api_url)
-data = response.json()
+def fetch_latest_reading():
+    response = requests.get(API_URL)
+    response.raise_for_status()
+    data = response.json()
 
-# Navigate to items > measures > latestReading
-items = data.get("items", {})
-measures = items.get("measures", {})
+    try:
+        latest = data["items"]["measures"][0]["latestReading"]
+        value = latest["value"]
+        timestamp = latest["dateTime"]
+        dt = datetime.fromisoformat(timestamp)
+        formatted_time = dt.strftime("%d/%m/%Y %H:%M")
+        rss_pub_date = dt.strftime("%a, %d %b %Y %H:%M:%S %z")  # RSS standard format
+        return value, formatted_time, rss_pub_date
+    except (KeyError, IndexError):
+        raise ValueError("Could not extract latest reading from API response.")
 
-latest = measures.get("latestReading", {})
-value = latest.get("value", "N/A")
-timestamp = latest.get("dateTime", datetime.utcnow().isoformat())
+def generate_rss(value, formatted_time, rss_pub_date):
+    rss = ET.Element("rss", version="2.0")
+    channel = ET.SubElement(rss, "channel")
+    ET.SubElement(channel, "title").text = "Shill Brook River Level"
+    ET.SubElement(channel, "link").text = "https://environment.data.gov.uk/flood-monitoring/id/stations/0913TH"
+    ET.SubElement(channel, "description").text = "Latest river level data for Shill Brook"
 
-# Format timestamp
-try:
-    formatted_timestamp = datetime.fromisoformat(timestamp.replace("Z", "+00:00")).strftime("%Y-%m-%d %H:%M:%S")
-except Exception:
-    formatted_timestamp = timestamp
+    item = ET.SubElement(channel, "item")
+    title_text = f"{formatted_time} – River Level: {value}m"
+    ET.SubElement(item, "title").text = title_text
+    ET.SubElement(item, "description").text = title_text
+    ET.SubElement(item, "pubDate").text = rss_pub_date
+    ET.SubElement(item, "guid").text = rss_pub_date
 
-# Create RSS feed
-rss = ET.Element("rss", version="2.0")
-channel = ET.SubElement(rss, "channel")
-ET.SubElement(channel, "title").text = "Shill Brook River Level"
-ET.SubElement(channel, "link").text = api_url
-ET.SubElement(channel, "description").text = "Live river level updates from the Environment Agency"
-ET.SubElement(channel, "lastBuildDate").text = formatted_timestamp
+    tree = ET.ElementTree(rss)
+    tree.write("shillbrook_river_level.xml", encoding="utf-8", xml_declaration=True)
 
-item = ET.SubElement(channel, "item")
-ET.SubElement(item, "title").text = f"Level: {value}m"
-ET.SubElement(item, "description").text = f"Observed at: {formatted_timestamp}"
-ET.SubElement(item, "pubDate").text = formatted_timestamp
-ET.SubElement(item, "guid").text = f"{station_id}-{formatted_timestamp}"
-
-tree = ET.ElementTree(rss)
-tree.write("shillbrook_river_level.xml", encoding="utf-8", xml_declaration=True)
-print("✅ RSS feed generated successfully.")
+if __name__ == "__main__":
+    value, formatted_time, rss_pub_date = fetch_latest_reading()
+    generate_rss(value, formatted_time, rss_pub_date)
