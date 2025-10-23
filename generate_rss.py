@@ -17,13 +17,13 @@ except Exception as e:
     logging.error(f"Failed to fetch data from API: {e}")
     data = {}
 
-station_name = data.get("label", f"Station {station_id}")
+station_name = data.get("items", {}).get("label", f"Station {station_id}")
 level = "N/A"
 trend = "N/A"
 timestamp = datetime.utcnow().isoformat()
 
-# Safely extract latest reading
-measures = data.get("measures", [])
+# Safely extract latest reading from items > measures > latestReading
+measures = data.get("items", {}).get("measures", [])
 if measures and isinstance(measures, list):
     latest_reading = measures[0].get("latestReading", {})
     level = latest_reading.get("value", "N/A")
