@@ -13,28 +13,37 @@ try:
     response = requests.get(api_url)
     response.raise_for_status()
     data = response.json()
+    logging.info("Successfully fetched data from API.")
 except Exception as e:
     logging.error(f"Failed to fetch data from API: {e}")
     data = {}
 
-station_name = data.get("items", {}).get("label", f"Station {station_id}")
+# Log the top-level keys
+logging.info(f"Top-level keys in response: {list(data.keys())}")
+
+# Navigate to items > measures > latestReading
+items = data.get("items", {})
+station_name = items.get("label", f"Station {station_id}")
+measures = items.get("measures", [])
+
+# Log number of measures found
+logging.info(f"Number of measures found: {len(measures)}")
+
 level = "N/A"
 trend = "N/A"
 timestamp = datetime.utcnow().isoformat()
 
-# Safely extract latest reading from items > measures > latestReading
-measures = data.get("items", {}).get("measures", [])
 if measures and isinstance(measures, list):
-    latest_reading = measures[0].get("latestReading", {})
-    level = latest_reading.get("value", "N/A")
-    if level == "N/A":
-        logging.warning("Missing 'value' in latest reading.")
-    timestamp = latest_reading.get("dateTime", timestamp)
-    if timestamp == datetime.utcnow().isoformat():
-        logging.warning("Missing 'dateTime' in latest reading.")
-    trend = latest_reading.get("trend", "N/A")
-    if trend == "N/A":
-        logging.warning("Missing 'trend' in latest reading.")
+    for measure in measures:
+        latest_reading = measure.get("latestReading")
+        if latest_reading:
+            level = latest_reading.get("value", "N/A")
+            timestamp = latest_reading.get("dateTime", timestamp)
+            trend = latest_reading.get("trend", "N/A")
+            logging.info(f"Found latest reading: value={level}, dateTime={timestamp}, trend={trend}")
+            break
+    else:
+        logging.warning("No valid latestReading found in measures.")
 else:
     logging.warning("Missing or invalid 'measures' data.")
 
