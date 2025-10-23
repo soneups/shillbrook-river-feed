@@ -1,4 +1,3 @@
-
 import requests
 import xml.etree.ElementTree as ET
 from datetime import datetime
@@ -64,11 +63,7 @@ ET.SubElement(channel, "description").text = "Live river level updates"
 ET.SubElement(channel, "lastBuildDate").text = formatted_timestamp
 
 item = ET.SubElement(channel, "item")
-# Format timestamp in European style
-european_timestamp = datetime.fromisoformat(timestamp.replace("Z", "+00:00")).strftime("%d/%m/%Y %H:%M")
-
-# Concatenate timestamp and level in title
-ET.SubElement(item, "title").text = f"{european_timestamp} – Level: {level}m"
+ET.SubElement(item, "title").text = f"Level: {level}m"
 ET.SubElement(item, "description").text = f"Trend: {trend}, Time: {formatted_timestamp}"
 ET.SubElement(item, "pubDate").text = formatted_timestamp
 ET.SubElement(item, "guid").text = f"{station_id}-{formatted_timestamp}"
