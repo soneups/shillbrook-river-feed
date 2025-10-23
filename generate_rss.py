@@ -4,15 +4,24 @@ from datetime import datetime
 
 station_id = "0913TH"
 api_url = f"https://environment.data.gov.uk/flood-monitoring/id/stations/{station_id}"
+
 response = requests.get(api_url)
 data = response.json()
 
-station_name = data.get("label", "Shill Brook at Bampton")
-latest = data["measures"][0]["latestReading"]
-level = latest["value"]
-timestamp = latest["dateTime"]
-trend = latest.get("trend", "N/A")
+station_name = data.get("label", f"Station {station_id}")
+level = "N/A"
+trend = "N/A"
+timestamp = datetime.utcnow().isoformat()
 
+# Safely extract latest reading
+measures = data.get("measures", [])
+if measures and isinstance(measures, list):
+    latest_reading = measures[0].get("latestReading", {})
+    level = latest_reading.get("value", "N/A")
+    timestamp = latest_reading.get("dateTime", timestamp)
+    trend = latest_reading.get("trend", "N/A")
+
+# Create RSS feed
 rss = ET.Element("rss", version="2.0")
 channel = ET.SubElement(rss, "channel")
 ET.SubElement(channel, "title").text = f"{station_name} River Level"
