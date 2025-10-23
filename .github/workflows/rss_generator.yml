@@ -24,10 +24,12 @@ jobs:
       - name: Run script
         run: python generate_rss.py
 
-      - name: Commit and push RSS feed
+- name: Commit and push RSS feed
         run: |
-          git config --global user.name 'github-actions'
-          git config --global user.email 'github-actions@github.com'
+          git config user.name github-actions
+          git config user.email github-actions@github.com
           git add shillbrook_river_level.xml
-          git commit -m 'Update RSS feed'
+          git commit -m "Update RSS feed"
           git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
